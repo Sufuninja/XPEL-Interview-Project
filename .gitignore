@@ -1,0 +1,61 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+*.vs/
+
+# Visual Studio 2017 auto generated files
+Generated\ Files/
+
+# MSTest test Results
+TestResults/
+BuildLog.*
+
+# NUnit
+*.VisualState.xml
+TestResult.xml
+
+# Build results (after doing a "dotnet pack")
+*.nupkg
+
+# Node.js dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Log files
+*.log
+
+# Output directory
+output/
+
+# IDE specific files
+*.idea/
+*.vscode/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+.DS_Store

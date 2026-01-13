@@ -1,0 +1,14 @@
+{
+	"name": "image-meta-extractor",
+	"version": "1.0.0",
+	"description": "Extract image metadata using sharp library",
+	"main": "image-meta.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"sharp": "^0.32.6"
+	},
+	"author": "",
+	"license": "MIT"
+}
