@@ -1,125 +1,158 @@
 # Automated Image Validation System
 
-This is a C#/.NET console application that validates product images by fetching them from a BigCommerce-like API, analyzing their properties using a Node.js helper with the Sharp library, and generating a compliance report.
+A C#/.NET 8 console application that validates product images for a list of SKUs. For each SKU, the app fetches associated image URLs via a BigCommerce-like client (fake implementation included), downloads images, extracts metadata using a Node.js helper (Sharp), evaluates against quality criteria, and generates CSV reports.
 
 ## Features
 
-- Parses product SKUs from a CSV input file
-- Fetches product images from a BigCommerce API (using a fake client for testing)
-- Extracts image metadata (width, height, DPI) using Node.js and Sharp
-- Validates images against configurable quality criteria
-- Generates a detailed CSV report with validation results
-- Supports concurrent processing for improved performance
+- Reads SKUs from an input CSV file (expects a header column named `SKU`)
+- Fetches image URLs per SKU via `IBigCommerceClient` (fake client provided for deterministic testing)
+- Downloads each image and extracts metadata using Node.js + Sharp (width, height, density/DPI when available)
+- Validates each image against configurable thresholds (min width/height; optional DPI enforcement)
+- Produces two reports:
+  - Image-level report: validation per image
+  - SKU-level report: rollup per SKU (flags SKUs with any failing images or no images)
+- Bounded concurrency for faster processing
 
 ## Prerequisites
 
 - .NET 8 SDK
-- Node.js (version 14 or higher)
-- npm (comes with Node.js)
+- Node.js + npm (Node 18+ recommended)
 
 ## Setup
 
-1. **Install .NET dependencies:**
-   ```bash
-   dotnet restore
-   ```
+From the repository root:
 
-2. **Install Node.js dependencies:**
-   ```bash
-   cd tools/image-meta
-   npm install
-   ```
+1. Restore .NET packages:
+
+   `dotnet restore`
+
+2. Install Node dependencies for the metadata tool:
+
+   `cd tools/image-meta`
+
+   `npm install`
+   
+   `cd ../..`
+
+### Windows PowerShell note (npm execution policy)
+
+If PowerShell blocks `npm.ps1`, run npm via the cmd shim:
+
+```ps
+& "C:\Program Files\nodejs\npm.cmd" install
+```
+
+Alternatively, run `npm install` from Command Prompt.
 
 ## Configuration
 
-The application uses the following configuration settings in `src/ImageValidation.Cli/appsettings.json`:
+Configuration is stored in `src/ImageValidation.Cli/appsettings.json`:
 
-- `Validation.MinWidthPx`: Minimum required image width in pixels
-- `Validation.MinHeightPx`: Minimum required image height in pixels
-- `Validation.MinDpi`: Minimum required DPI (dots per inch)
-- `Validation.FailIfDpiMissing`: Whether to flag images when DPI information is missing
-- `Concurrency.MaxConcurrency`: Maximum number of concurrent image processing operations
+- `Validation.MinWidthPx`: minimum allowed width (px)
+- `Validation.MinHeightPx`: minimum allowed height (px)
+- `Validation.MinDpi`: minimum allowed DPI (if enforced)
+- `Validation.FailIfDpiMissing`: if true, missing DPI is flagged; otherwise DPI is treated as `N/A`
+- `Concurrency.MaxConcurrency`: max number of SKUs processed concurrently
+- `Node.ToolsDirectory`: path to the Node helper directory (repo-root-relative)
 
 ## Usage
 
-Run the application with default input/output files:
-```bash
-dotnet run
+Run with defaults (uses `samples/input-skus.csv` and writes to `output/`):
+
+```ps
+dotnet run --project .\src\ImageValidation.Cli\ImageValidation.Cli.csproj
 ```
 
-Or specify custom input and output CSV files:
-```bash
-dotnet run -- <inputCsv> <outputCsv>
+Run with custom input/output:
+
+```ps
+dotnet run --project .\src\ImageValidation.Cli\ImageValidation.Cli.csproj -- <inputCsv> <outputImageReportCsv>
 ```
 
 Example:
-```bash
-dotnet run -- samples/input-skus.csv output/report.csv
+
+```ps
+dotnet run --project .\src\ImageValidation.Cli\ImageValidation.Cli.csproj -- .\samples\input-skus.csv .\output\output-report.csv
 ```
+
+## Output
+
+The app writes:
+
+1. Image-level report (per-image)
+
+    - Default: `output/output-report.csv`
+    - Columns: `Sku`, `ImageUrl`, `Width`, `Height`, `Dpi`, `DimensionResult`, `DpiResult`, `Status`, `Notes`
+
+2. SKU-level summary report (rollup)
+
+    - Default: `output/output-report-skus.csv`
+    - Columns: `Sku`, `ImageCount`, `OkCount`, `FlagCount`, `Status`, `Notes`
+
+SKU status logic:
+
+- `FLAG` if any image is flagged OR the SKU has no images
+- otherwise `OK`
 
 ## Project Structure
 
-```
-├── src/
-│   └── ImageValidation.Cli/     # Main C# console application
-│       ├── Models/              # Data models (Sku, Image, Metadata, ReportRow)
-│       ├── BigCommerce/         # BigCommerce client interface and implementations
-│       ├── Services/            # Core services (CSV, download, validation, reporting)
-│       ├── Utilities/           # Helper classes (ProcessRunner, TempFileHelper, ConcurrencyHelper)
-│       ├── appsettings.json     # Configuration file
-│       └── Program.cs           # Main entry point
-├── tools/
-│   └── image-meta/              # Node.js helper for image metadata extraction
-│       ├── package.json         # Node.js dependencies
-│       └── image-meta.js        # Image metadata extraction script
-├── samples/                     # Sample data
-│   └── input-skus.csv           # Sample input CSV file
-├── output/                      # Output directory for reports
-└── README.md                    # This file
-```
+* `src/`
 
-## Swapping FakeBigCommerceClient for a Real Implementation
+  * `ImageValidation.Cli/` (Main .NET console application)
 
-To use a real BigCommerce API client instead of the fake one:
+    * `Models/` (Data models: `Sku`, `Image`, `Metadata`, `ReportRow`, `SkuSummaryRow`)
+    * `BigCommerce/` (`IBigCommerceClient` + `FakeBigCommerceClient` + placeholder real client)
+    * `Services/` (CSV, download, metadata extraction, validation, reporting, SKU summary)
+    * `Utilities/` (Process runner, temp file helpers, concurrency helpers)
+    * `appsettings.json` (Configuration)
+    * `Program.cs` (Entry point)
+* `tools/`
 
-1. Implement the `IBigCommerceClient` interface in `src/ImageValidation.Cli/BigCommerce/RealBigCommerceClient.cs`
-2. Modify the service creation in `Program.cs`:
-   ```csharp
-   // Replace this line:
-   var bigCommerceClient = new FakeBigCommerceClient();
-   
-   // With:
-   var bigCommerceClient = new RealBigCommerceClient();
+  * `image-meta/` (Node metadata extractor using Sharp)
+
+    * `package.json`
+    * `image-meta.js`
+* `samples/`
+
+  * `input-skus.csv` (Sample input file)
+* `output/` (Output report directory)
+* `README.md`
+
+## How it Works
+
+1. Read SKUs from the CSV input file
+2. For each SKU:
+
+   * Fetch image URLs from `IBigCommerceClient`
+   * Download images to temporary files
+   * Invoke `node image-meta.js "<tempPath>"` to extract metadata as JSON
+   * Validate against configured thresholds
+3. Write the image-level report CSV
+4. Build and write the SKU-level summary CSV
+5. Print a short console summary
+
+## Swapping FakeBigCommerceClient for a Real BigCommerce Client
+
+1. Implement `IBigCommerceClient` using `HttpClient` (e.g., `RealBigCommerceClient`) to call BigCommerce endpoints:
+
+   * Look up product by SKU (catalog/products)
+   * Retrieve product images (catalog/products/{productId}/images)
+
+2. Replace the client instantiation in `Program.cs`:
+
+   ```cs
+   // var bigCommerceClient = new FakeBigCommerceClient();
+   var bigCommerceClient = new RealBigCommerceClient(httpClient, /* credentials/config */);
    ```
+3. Provide credentials via configuration or environment variables for real integrations.
 
-## How It Works
+## Sample Input
 
-1. The application reads SKUs from the input CSV file
-2. For each SKU, it fetches associated product images from the BigCommerce API
-3. Each image is downloaded to a temporary file
-4. The Node.js helper script (`image-meta.js`) is invoked to extract image metadata using the Sharp library
-5. Images are validated against the configured quality criteria
-6. A detailed CSV report is generated with validation results for each image
-7. Summary statistics are printed to the console
+`samples/input-skus.csv` includes:
 
-## Report Format
+* SKU001: multiple images (mixed results)
+* SKU002: single passing image
+* SKU003: no images
+* SKU004: multiple images (mixed results)
+* SKU005: unknown SKU (no images)
 
-The output CSV contains the following columns:
-- `Sku`: Product SKU
-- `ImageUrl`: URL of the image
-- `Width`: Image width in pixels
-- `Height`: Image height in pixels
-- `Dpi`: Image DPI (if available)
-- `DimensionResult`: "PASS", "FAIL", or "ERROR"
-- `DpiResult`: "PASS", "FAIL", "N/A", or "ERROR"
-- `Status`: "OK" or "FLAG"
-- `Notes`: Additional information about validation results or errors
-
-## Sample Data
-
-The `samples/input-skus.csv` file contains sample SKUs for testing:
-- SKU001: Multiple images (one passing, one failing)
-- SKU002: Single passing image
-- SKU003: No images
-- SKU004: Multiple images with mixed results
-- SKU005: Unknown SKU (no images)
