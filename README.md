@@ -148,22 +148,22 @@ SKU status logic:
 
 ### Additional Considerations for Real BigCommerce Implementation
 
-When implementing a real BigCommerce client, consider these complexities:
+When implementing a real BigCommerce client, we would need to consider the following complexities:
 
 1. **SKU Mapping Complexity**: In real BigCommerce implementations, SKU mapping can be complex because:
    - SKUs can exist at both product and variant levels
    - A single SKU might map to multiple products/variants
    - The API might require different lookup paths depending on store configuration
 
-2. **API Response Structure**: The BigCommerce API returns rich metadata with images that could be leveraged:
+2. **API Response Structure**: The BigCommerce API looks to return rich metadata with images that could probably be leveraged:
    - Image descriptions/alt text for accessibility validation
    - Image position/order for display validation
    - Image file names for naming convention validation
 
 3. **Performance Considerations**: 
-   - Add caching for product lookups to avoid repeated API calls
-   - Implement bulk operations if processing many SKUs
-   - Handle rate limiting (429 responses) with appropriate backoff strategies
+   - I might consider adding caching for product lookups to avoid repeated API calls
+   - Implement bulk operations if processing many SKUs (e.g., multiple SKUs per API call, safe parallelizing with Parallel.ForEachAsync...)
+   - Handle rate limiting (429 responses) with appropriate backoff strategies (I've never implemented this but I know it's a thing)
 
 4. **Error Handling**:
    - Handle authentication errors (401, 403)
