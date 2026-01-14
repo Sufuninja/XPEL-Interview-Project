@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using ImageValidation.Cli.Models;
@@ -39,21 +41,37 @@ public sealed class RealBigCommerceClient : IBigCommerceClient
 
     private async Task<long?> TryFindProductIdBySkuAsync(string sku)
     {
-        // BigCommerce supports filtering products by sku via query parameters in many configurations.
-        // If unsupported in the target environment, this would need to be replaced with another lookup path.
-        var url = $"catalog/products?sku={Uri.EscapeDataString(sku)}&limit=1";
+        try 
+        {
+            // BigCommerce supports filtering products by sku via query parameters in many configurations.
+            // If unsupported in the target environment, this would need to be replaced with another lookup path.
+            var url = $"catalog/products?sku={Uri.EscapeDataString(sku)}&limit=1";
 
-        using var resp = await _http.GetAsync(url);
-        if (!resp.IsSuccessStatusCode)
-            return null;
+            using var resp = await _http.GetAsync(url);
+            if (!resp.IsSuccessStatusCode)
+                return null;
 
-        var json = await resp.Content.ReadAsStringAsync();
-        var parsed = JsonSerializer.Deserialize<BigCommerceListResponse<BigCommerceProduct>>(json, JsonOptions);
-        return parsed?.Data?.FirstOrDefault()?.Id;
+            var json = await resp.Content.ReadAsStringAsync();
+            var parsed = JsonSerializer.Deserialize<BigCommerceListResponse<BigCommerceProduct>>(json, JsonOptions);
+            return parsed?.Data?.FirstOrDefault()?.Id;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            // Handle auth errors specifically
+            throw new BigCommerceAuthException("Invalid or expired access token", ex);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            // Handle rate limiting with something like:
+            throw new BigCommerceRateLimitException("Rate limit exceeded", ex);
+        }
     }
 
     private async Task<List<string>> GetImagesByProductIdAsync(long productId)
     {
+        // Will need to extract more image metadata from the response &
+        // Handle different image types more explicitly
+        
         var url = $"catalog/products/{productId}/images";
 
         using var resp = await _http.GetAsync(url);
@@ -63,7 +81,7 @@ public sealed class RealBigCommerceClient : IBigCommerceClient
         var json = await resp.Content.ReadAsStringAsync();
         var parsed = JsonSerializer.Deserialize<BigCommerceListResponse<BigCommerceImage>>(json, JsonOptions);
 
-        // BigCommerce image payloads often include different URL fields; adjust based on actual response.
+        // TODO: BigCommerce image payloads often include different URL fields; adjust based on actual response.
         return parsed?.Data?
             .Select(i => i.UrlStandard ?? i.UrlOriginal ?? i.UrlThumbnail)
             .Where(u => !string.IsNullOrWhiteSpace(u))
@@ -84,6 +102,38 @@ public sealed class RealBigCommerceClient : IBigCommerceClient
         string? UrlOriginal,
         string? UrlThumbnail
     );
+
+    [Serializable]
+    private class BigCommerceRateLimitException : Exception
+    {
+        public BigCommerceRateLimitException()
+        {
+        }
+
+        public BigCommerceRateLimitException(string? message) : base(message)
+        {
+        }
+
+        public BigCommerceRateLimitException(string? message, Exception? innerException) : base(message, innerException)
+        {
+        }
+    }
+
+    [Serializable]
+    private class BigCommerceAuthException : Exception
+    {
+        public BigCommerceAuthException()
+        {
+        }
+
+        public BigCommerceAuthException(string? message) : base(message)
+        {
+        }
+
+        public BigCommerceAuthException(string? message, Exception? innerException) : base(message, innerException)
+        {
+        }
+    }
 }
 
 public sealed class BigCommerceOptions
