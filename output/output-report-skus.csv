@@ -1,0 +1,6 @@
+Sku,ImageCount,OkCount,FlagCount,Status,Notes
+SKU001,2,1,1,FLAG,1 image(s): Dimensions 200x150 below minimum 500x500
+SKU003,0,0,0,FLAG,No images found
+SKU004,3,2,1,FLAG,1 image(s): Dimensions 300x200 below minimum 500x500
+SKU005,0,0,0,FLAG,No images found
+SKU002,1,1,0,OK,

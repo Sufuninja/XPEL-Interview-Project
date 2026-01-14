@@ -1,0 +1,9 @@
+Sku,ImageUrl,Width,Height,Dpi,DimensionResult,DpiResult,Status,Notes
+SKU001,https://picsum.photos/200/150,200,150,72,FAIL,PASS,FLAG,Dimensions 200x150 below minimum 500x500
+SKU001,https://picsum.photos/800/600,800,600,72,PASS,PASS,OK,
+SKU002,https://picsum.photos/1200/800,1200,800,72,PASS,PASS,OK,
+SKU003,,,,,N/A,N/A,FLAG,No images found
+SKU004,https://picsum.photos/300/200,300,200,72,FAIL,PASS,FLAG,Dimensions 300x200 below minimum 500x500
+SKU004,https://picsum.photos/1000/750,1000,750,72,PASS,PASS,OK,
+SKU004,https://picsum.photos/1500/1000,1500,1000,72,PASS,PASS,OK,
+SKU005,,,,,N/A,N/A,FLAG,No images found
