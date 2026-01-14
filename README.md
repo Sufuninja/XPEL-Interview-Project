@@ -146,6 +146,30 @@ SKU status logic:
    ```
 3. Provide credentials via configuration or environment variables for real integrations.
 
+### Additional Considerations for Real BigCommerce Implementation
+
+When implementing a real BigCommerce client, consider these complexities:
+
+1. **SKU Mapping Complexity**: In real BigCommerce implementations, SKU mapping can be complex because:
+   - SKUs can exist at both product and variant levels
+   - A single SKU might map to multiple products/variants
+   - The API might require different lookup paths depending on store configuration
+
+2. **API Response Structure**: The BigCommerce API returns rich metadata with images that could be leveraged:
+   - Image descriptions/alt text for accessibility validation
+   - Image position/order for display validation
+   - Image file names for naming convention validation
+
+3. **Performance Considerations**: 
+   - Add caching for product lookups to avoid repeated API calls
+   - Implement bulk operations if processing many SKUs
+   - Handle rate limiting (429 responses) with appropriate backoff strategies
+
+4. **Error Handling**:
+   - Handle authentication errors (401, 403)
+   - Implement retry logic for transient failures
+   - Log API errors for debugging and monitoring
+
 ## Sample Input
 
 `samples/input-skus.csv` includes:
@@ -155,4 +179,3 @@ SKU status logic:
 * SKU003: no images
 * SKU004: multiple images (mixed results)
 * SKU005: unknown SKU (no images)
-
